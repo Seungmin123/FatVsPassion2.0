@@ -22,7 +22,8 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
                     "mention_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "user_id INTEGER, " +
                     "user_name TEXT, " +
-                    "date TEXT)"
+                    "date TEXT," +
+                    "chat_id INTEGER)"
         )
     }
 
@@ -75,33 +76,56 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
 
     fun selectMethodList(chatId: Long) {
         val message = "명령어 모음 입니다.\n"
-        "/오운완 : 개인별 운동 기록\n" +
+                "/오운완 : 개인별 운동 기록\n" +
                 "/주간집계 : 일주일간 총 집계\n" +
                 "/삭제 : 최근 입력 데이터 삭제"
         sendTextMessage(chatId, message)
     }
 
     fun exerciseInsert(userInfo: UserInfo) {
-        val insertQuery = "INSERT INTO mentions(user_id, user_name, date) VALUES (?, ?, ?)"
-        val statement = dbConnection.prepareStatement(insertQuery)
-        statement.setLong(1, userInfo.userId.toLong())
-        statement.setString(2, userInfo.userName)
-        statement.setString(3, userInfo.date.format(dateFormatter))
+        val maxDate: String? = validateExerciseInsert(userInfo)
+        var message: String
 
-        statement.executeUpdate()
+        if(maxDate != null && maxDate.equals(userInfo.date.toString())){
+            message = "${userInfo.userName} 님! 운동 집계는 1일 1회까지만 가능합니다!"
+        }else {
+            val insertQuery = "INSERT INTO mentions(user_id, user_name, date, chat_id) VALUES (?, ?, ?, ?)"
+            val statement = dbConnection.prepareStatement(insertQuery)
+            statement.setLong(1, userInfo.userId)
+            statement.setString(2, userInfo.userName)
+            statement.setString(3, userInfo.date.format(dateFormatter))
+            statement.setLong(4, userInfo.chatId)
+
+            statement.executeUpdate()
+
+            statement.close()
+
+            message = "${userInfo.userName ?: ""} 님! 입력완료입니다!"
+        }
+
+        sendTextMessage(userInfo.chatId, message)
+    }
+
+    fun validateExerciseInsert(userInfo: UserInfo): String{
+        val selectQuery = "SELECT MAX(date) as maxDate FROM mentions WHERE user_id = ? GROUP BY user_id"
+
+        val statement = dbConnection.prepareStatement(selectQuery)
+        statement.setLong(1, userInfo.userId.toLong())
+        val resultSet =statement.executeQuery()
 
         statement.close()
 
-        sendTextMessage(userInfo.chatId, "${userInfo.userName ?: ""} 입력완료!")
+        return resultSet.getString("maxDate")
     }
 
     fun selectWeeklyCntMsg(userInfo: UserInfo) {
         val startOfWeek = userInfo.date.with(DayOfWeek.MONDAY)
         val endOfWeek = userInfo.date.with(DayOfWeek.SUNDAY)
-        val selectQuery = "SELECT user_name, COUNT(user_id) as 'cnt' FROM mentions WHERE date >= ? AND date <= ? GROUP BY user_id"
+        val selectQuery = "SELECT user_name, COUNT(user_id) as 'cnt' FROM mentions WHERE date >= ? AND date <= ? AND chat_id = ? GROUP BY user_id, chat_id"
         val statement = dbConnection.prepareStatement(selectQuery)
         statement.setString(1, startOfWeek.format(dateFormatter))
         statement.setString(2, endOfWeek.format(dateFormatter))
+        statement.setLong(3, userInfo.chatId)
 
         val resultSet = statement.executeQuery()
 
@@ -127,14 +151,14 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
                 "   GROUP BY user_id" +
                 ") V"
         val statement = dbConnection.prepareStatement(deleteQuery)
-        statement.setString(1, userInfo.userId.toString())
-        statement.setString(2, userInfo.userId.toString())
+        statement.setLong(1, userInfo.userId)
+        statement.setLong(2, userInfo.userId)
 
         statement.executeUpdate()
 
         statement.close()
 
-        sendTextMessage(userInfo.chatId, "${userInfo.userName} 님 최근 데이터를 삭제하였습니다.")
+        sendTextMessage(userInfo.chatId, "${userInfo.userName} 님의 최근 데이터를 삭제하였습니다.")
     }
 
     fun deleteAllData(chatId: Long){
