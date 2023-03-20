@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     kotlin("jvm") version "1.7.21"
     application
@@ -14,17 +12,17 @@ repositories {
 
 dependencies {
     implementation("org.telegram:telegrambots:5.3.0")
-    implementation ("org.xerial:sqlite-jdbc:3.36.0.1")
+    implementation("org.xerial:sqlite-jdbc:3.36.0.1")
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
+val fatVsPassion = "com.whalee.FatVsPassionKt"
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-application {
-    mainClass.set("main")
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = fatVsPassion
+    }
+    configurations["compileClasspath"].forEach { file: File ->
+        from(zipTree(file.absoluteFile))
+    }
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
