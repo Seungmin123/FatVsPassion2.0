@@ -1,4 +1,4 @@
-package com.whalee
+package com.whalee.service
 
 import com.whalee.dto.UserInfo
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
@@ -11,6 +11,8 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+// TODO 과거 운동 집계 기록 조회
+// TODO 회원별 과거 운동 기록 조회
 class FatVsPassionUtil(private val token: String, private val chatName: String) : TelegramLongPollingBot() {
 
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -75,7 +77,7 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
     }
 
     fun selectMethodList(chatId: Long) {
-        val message = "명령어 모음 입니다.\n"
+        val message = "명령어 모음 입니다.\n" +
                 "/오운완 : 개인별 운동 기록\n" +
                 "/주간집계 : 일주일간 총 집계\n" +
                 "/삭제 : 최근 입력 데이터 삭제"
@@ -83,7 +85,7 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
     }
 
     fun exerciseInsert(userInfo: UserInfo) {
-        val maxDate: String? = validateExerciseInsert(userInfo)
+        val maxDate: String = validateExerciseInsert(userInfo)
         var message: String
 
         if(maxDate != null && maxDate.equals(userInfo.date.toString())){
@@ -110,10 +112,8 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
         val selectQuery = "SELECT MAX(date) as maxDate FROM mentions WHERE user_id = ? GROUP BY user_id"
 
         val statement = dbConnection.prepareStatement(selectQuery)
-        statement.setLong(1, userInfo.userId.toLong())
+        statement.setLong(1, userInfo.userId)
         val resultSet =statement.executeQuery()
-
-        statement.close()
 
         return resultSet.getString("maxDate")
     }
@@ -149,7 +149,7 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
                 "   FROM mentions" +
                 "   WHERE user_id = ?" +
                 "   GROUP BY user_id" +
-                ") V"
+                ")"
         val statement = dbConnection.prepareStatement(deleteQuery)
         statement.setLong(1, userInfo.userId)
         statement.setLong(2, userInfo.userId)
