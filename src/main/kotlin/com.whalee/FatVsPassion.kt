@@ -1,5 +1,6 @@
 package com.whalee
 
+import com.whalee.service.FatVsPassionUtil
 import org.telegram.telegrambots.meta.TelegramBotsApi
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession
 

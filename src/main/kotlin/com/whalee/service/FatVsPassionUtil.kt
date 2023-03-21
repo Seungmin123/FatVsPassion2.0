@@ -22,10 +22,10 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
         dbConnection.createStatement().execute(
             "CREATE TABLE IF NOT EXISTS mentions (" +
                     "mention_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "user_id INTEGER, " +
+                    "user_id BIGINT, " +
                     "user_name TEXT, " +
                     "date TEXT," +
-                    "chat_id INTEGER)"
+                    "chat_id BIGINT)"
         )
     }
 
@@ -71,7 +71,7 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
     }
 
     fun selectIndexMessage(chatId: Long){
-        val message = "안녕하세요! 지방은 열정을 이길 수 없다 Ver_1.1 입니다.\n" +
+        val message = "안녕하세요! 지방은 열정을 이길 수 없다 Ver_1.2.1 입니다.\n" +
                 "/명령어 : 명령어 모음"
         sendTextMessage(chatId, message)
     }
@@ -85,12 +85,12 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
     }
 
     fun exerciseInsert(userInfo: UserInfo) {
-        val maxDate: String = validateExerciseInsert(userInfo)
-        var message: String
-
-        if(maxDate != null && maxDate.equals(userInfo.date.toString())){
-            message = "${userInfo.userName} 님! 운동 집계는 1일 1회까지만 가능합니다!"
-        }else {
+//        val maxDate: String? = validateExerciseInsert(userInfo)
+//        var message: String
+//
+//        if(maxDate != null && maxDate.equals(userInfo.date.toString())){
+//            message = "${userInfo.userName} 님! 운동 집계는 1일 1회까지만 가능합니다!"
+//        }else {
             val insertQuery = "INSERT INTO mentions(user_id, user_name, date, chat_id) VALUES (?, ?, ?, ?)"
             val statement = dbConnection.prepareStatement(insertQuery)
             statement.setLong(1, userInfo.userId)
@@ -102,8 +102,8 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
 
             statement.close()
 
-            message = "${userInfo.userName ?: ""} 님! 입력완료입니다!"
-        }
+            val message = "${userInfo.userName ?: ""} 님! 입력완료입니다!"
+//        }
 
         sendTextMessage(userInfo.chatId, message)
     }
@@ -114,14 +114,23 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
         val statement = dbConnection.prepareStatement(selectQuery)
         statement.setLong(1, userInfo.userId)
         val resultSet =statement.executeQuery()
+        val returnStr = resultSet.getString("maxDate")
+        statement.close()
 
-        return resultSet.getString("maxDate")
+        return returnStr
     }
 
     fun selectWeeklyCntMsg(userInfo: UserInfo) {
         val startOfWeek = userInfo.date.with(DayOfWeek.MONDAY)
         val endOfWeek = userInfo.date.with(DayOfWeek.SUNDAY)
-        val selectQuery = "SELECT user_name, COUNT(user_id) as 'cnt' FROM mentions WHERE date >= ? AND date <= ? AND chat_id = ? GROUP BY user_id, chat_id"
+        val selectQuery = "SELECT user_name, COUNT(user_name) as 'cnt' \n" +
+                "FROM ( \n" +
+                    "SELECT user_name, date \n" +
+                    "FROM mentions \n" +
+                    "WHERE date >= ? AND date <= ? AND chat_id = ? \n" +
+                    "GROUP BY user_id, chat_id, date \n" +
+                ") V \n" +
+                "GROUP BY V.user_name"
         val statement = dbConnection.prepareStatement(selectQuery)
         statement.setString(1, startOfWeek.format(dateFormatter))
         statement.setString(2, endOfWeek.format(dateFormatter))
@@ -143,16 +152,14 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
 
     fun deleteUserRecentData(userInfo: UserInfo) {
         val deleteQuery = "DELETE FROM mentions " +
-                "WHERE user_id = ? " +
-                "  AND date = (" +
-                "   SELECT MAX(date)" +
+                "WHERE mention_id = (" +
+                "   SELECT MAX(mention_id)" +
                 "   FROM mentions" +
                 "   WHERE user_id = ?" +
                 "   GROUP BY user_id" +
                 ")"
         val statement = dbConnection.prepareStatement(deleteQuery)
         statement.setLong(1, userInfo.userId)
-        statement.setLong(2, userInfo.userId)
 
         statement.executeUpdate()
 
