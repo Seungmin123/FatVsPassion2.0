@@ -39,25 +39,28 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
             val userName: String? = "${message.from.lastName ?: ""} ${message.from.firstName ?: ""}"
             val userInfo = UserInfo(message.from.id, userName, LocalDate.now(), message.chat.id)
 
-            when (message.text) {
-                "/start" -> {
-                    selectIndexMessage(userInfo.chatId)
+            if(message.text.startsWith("/start")){
+                selectIndexMessage(userInfo.chatId)
+
+            }else if(message.text.startsWith("/명령어")){
+                selectMethodList(userInfo.chatId)
+
+            }else if(message.text.startsWith("/오운완")){
+                exerciseInsert(userInfo)
+
+            }else if(message.text.startsWith("/주간집계")){
+                var dateTime: LocalDate? = null
+                if(message.text.matches(Regex("^/주간집계\\s\\d{4}-\\d{2}-\\d{2}"))){
+                    dateTime = LocalDate.parse(message.text.substringAfter(" "))
                 }
-                "/명령어" -> {
-                    selectMethodList(userInfo.chatId)
-                }
-                "/오운완" -> {
-                    exerciseInsert(userInfo)
-                }
-                "/주간집계" -> {
-                    selectWeeklyCntMsg(userInfo)
-                }
-                "/삭제" -> {
-                    deleteUserRecentData(userInfo)
-                }
-                "/크크루삥뽕" -> {
-                    deleteAllData(userInfo.chatId)
-                }
+                selectWeeklyCntMsg(userInfo, dateTime)
+
+            }else if(message.text.startsWith("/삭제")){
+                deleteUserRecentData(userInfo)
+
+            }else if(message.text.startsWith("/크크루삥뽕")){
+                deleteAllData(userInfo.chatId)
+
             }
         }
     }
@@ -71,26 +74,21 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
     }
 
     fun selectIndexMessage(chatId: Long){
-        val message = "안녕하세요! 지방은 열정을 이길 수 없다 Ver_1.2.1 입니다.\n" +
-                "/명령어 : 명령어 모음"
+        val message = "안녕하세요! 지방은 열정을 이길 수 없다 Ver_1.3 입니다.\n" +
+                "/명령어: 명령어 모음"
         sendTextMessage(chatId, message)
     }
 
     fun selectMethodList(chatId: Long) {
         val message = "명령어 모음 입니다.\n" +
-                "/오운완 : 개인별 운동 기록\n" +
-                "/주간집계 : 일주일간 총 집계\n" +
-                "/삭제 : 최근 입력 데이터 삭제"
+                "/오운완: 개인별 운동 기록\n" +
+                "/주간집계: 일주일간 총 집계\n" +
+                "/주간집계 yyyy-mm-dd: 해당 일자가 포함되어있는 일주일간 총 집계\n" +
+                "/삭제: 최근 입력 데이터 삭제"
         sendTextMessage(chatId, message)
     }
 
     fun exerciseInsert(userInfo: UserInfo) {
-//        val maxDate: String? = validateExerciseInsert(userInfo)
-//        var message: String
-//
-//        if(maxDate != null && maxDate.equals(userInfo.date.toString())){
-//            message = "${userInfo.userName} 님! 운동 집계는 1일 1회까지만 가능합니다!"
-//        }else {
             val insertQuery = "INSERT INTO mentions(user_id, user_name, date, chat_id) VALUES (?, ?, ?, ?)"
             val statement = dbConnection.prepareStatement(insertQuery)
             statement.setLong(1, userInfo.userId)
@@ -103,7 +101,6 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
             statement.close()
 
             val message = "${userInfo.userName ?: ""} 님! 입력완료입니다!"
-//        }
 
         sendTextMessage(userInfo.chatId, message)
     }
@@ -120,9 +117,18 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
         return returnStr
     }
 
-    fun selectWeeklyCntMsg(userInfo: UserInfo) {
-        val startOfWeek = userInfo.date.with(DayOfWeek.MONDAY)
-        val endOfWeek = userInfo.date.with(DayOfWeek.SUNDAY)
+    fun selectWeeklyCntMsg(userInfo: UserInfo, dateTime: LocalDate?) {
+        var startOfWeek: LocalDate
+        var endOfWeek: LocalDate
+
+        if(dateTime != null) {
+            startOfWeek = dateTime.with(DayOfWeek.MONDAY)
+            endOfWeek = dateTime.with(DayOfWeek.SUNDAY)
+        }else{
+            startOfWeek = userInfo.date.with(DayOfWeek.MONDAY)
+            endOfWeek = userInfo.date.with(DayOfWeek.SUNDAY)
+        }
+
         val selectQuery = "SELECT user_name, COUNT(user_name) as 'cnt' \n" +
                 "FROM ( \n" +
                     "SELECT user_name, date \n" +
@@ -140,7 +146,7 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
 
         var sendMsg = startOfWeek.format(dateFormatter) + " ~ " + endOfWeek.format(dateFormatter) + " 집계입니다.\n\n"
         while(resultSet.next())
-            sendMsg += resultSet.getString("user_name") + " : " + resultSet.getInt("cnt") + " 회\n\n"
+            sendMsg += resultSet.getString("user_name") + ": " + resultSet.getInt("cnt") + " 회\n\n"
 
         sendMsg += "\n한 주간 고생 많으셨습니다!"
 
