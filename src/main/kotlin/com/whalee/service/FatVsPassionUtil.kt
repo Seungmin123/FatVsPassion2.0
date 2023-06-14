@@ -11,8 +11,8 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-// TODO 과거 운동 집계 기록 조회
-// TODO 회원별 과거 운동 기록 조회
+// TODO 개인 목표 횟수 테이블 & API 개발
+// TODO toDate & endDate 를 통해 해당 주 몇 회 실시하였는지, 몇 주차엔 달성하였꼬 실패하였는지 API
 class FatVsPassionUtil(private val token: String, private val chatName: String) : TelegramLongPollingBot() {
 
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -110,7 +110,7 @@ class FatVsPassionUtil(private val token: String, private val chatName: String) 
 
         val statement = dbConnection.prepareStatement(selectQuery)
         statement.setLong(1, userInfo.userId)
-        val resultSet =statement.executeQuery()
+        val resultSet = statement.executeQuery()
         val returnStr = resultSet.getString("maxDate")
         statement.close()
 
