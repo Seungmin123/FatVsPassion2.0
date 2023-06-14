@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
 	war
-	id("org.springframework.boot") version "3.1.1-SNAPSHOT"
 	id("io.spring.dependency-management") version "1.1.0"
 	kotlin("jvm") version "1.8.22"
 	kotlin("plugin.spring") version "1.8.22"
@@ -20,15 +19,17 @@ repositories {
 }
 
 dependencies {
-	implementation("org.springframework.boot:spring-boot-starter-batch")
-	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-	implementation("org.springframework.boot:spring-boot-starter-web")
-	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-	implementation("org.jetbrains.kotlin:kotlin-reflect")
-	runtimeOnly("org.postgresql:postgresql")
-	providedRuntime("org.springframework.boot:spring-boot-starter-tomcat")
-	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	testImplementation("org.springframework.batch:spring-batch-test")
+	implementation("org.telegram:telegrambots:5.3.0")
+	implementation("org.springframework.boot:spring-boot-starter-batch:3.1.0")
+	implementation("org.springframework.boot:spring-boot-starter-data-jpa:3.1.0")
+	implementation("org.springframework.boot:spring-boot-starter-web:3.1.0")
+	// ?
+	implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
+	// ?
+	runtimeOnly("org.jetbrains.kotlin:kotlin-reflect:1.8.21")
+	runtimeOnly("org.postgresql:postgresql:42.6.0")
+	providedRuntime("org.springframework.boot:spring-boot-starter-tomcat:3.1.0")
+	testImplementation("org.springframework.boot:spring-boot-starter-test:3.1.0")
 }
 
 tasks.withType<KotlinCompile> {
